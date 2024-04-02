@@ -1,0 +1,29 @@
+version: "3.9"
+services:
+  writeonce.api:
+    build: .
+    image: writeonce-api
+    container_name: writeonce-api-container
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=443
+     # - ASPNETCORE_URLS=https://+;http://+
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=secret
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/writeonce-app.pfx
+    volumes:
+      -  ~/.aspnet/https:/https:ro
+    ports:
+      - "8080:8080"
+      - "8081:443"
+    restart: unless-stopped
+    networks:
+      appNetwork:
+        ipv4_address: 18.5.0.4
+networks:
+  appNetwork:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 18.5.0.0/16
+          gateway: 18.5.0.1
