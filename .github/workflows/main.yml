@@ -1,0 +1,64 @@
+name: WriteOnceAPI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:    
+    runs-on: [self-hosted]
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Set up .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Build with dotnet
+      run: dotnet build --configuration Release --no-restore
+
+
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted]
+    
+    steps:
+    - name: Project publish
+      run: dotnet publish -c Release -o ${{env.DOTNET_ROOT}}/writeonce-api
+
+    - name: Deploy to IIS
+      run: |
+        if ((Get-WebSiteState -Name writeonce).Value -eq "Started")
+        {
+            Stop-WebSite -Name writeonce
+            echo "Stopped Website writeonce API project"
+        }
+        if ((Get-WebAppPoolState -Name writeonce).Value -eq "Started")
+        {
+            Stop-WebAppPool -Name writeonce
+            echo "Stopped Application Pool writeonce"
+        }
+        
+        Start-Sleep -s 15        
+        Copy-Item ${{env.DOTNET_ROOT}}/writeonce-api/* C:\Shoney\Publish\api -Recurse -Force
+        
+        if ((Get-WebSiteState -Name writeonce).Value -eq "Stopped")
+        {
+            Start-WebSite -Name writeonce
+            echo "Started Website writeonce"
+        }
+        if ((Get-WebAppPoolState -Name writeonce).Value -eq "Stopped")
+        {
+            Start-WebAppPool -Name writeonce
+            echo "Started Application Pool writeonce"
+        }
+        
+        if ($lastexitcode -lt 8) { $global:lastexitcode = 0 }
